@@ -71,6 +71,8 @@ def init_ray(num_cpus_per_task: int, env_type: str):
 async def discover_impl(config: DiscoverConfig):
     """Convert discover config to full config and run training."""
 
+    assert config.model_name in {"openai/gpt-oss-120b", "openai/gpt-oss-20b"}, "Only supporting GPT-OSS models for now."
+
     # Ray is needed to dispatch jobs across cpus
     if config.num_cpus_per_task > 0:
         init_ray(config.num_cpus_per_task, config.env_type)

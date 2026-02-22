@@ -3,13 +3,13 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+.openproblems_cache/
+
 # C extensions
 *.so
 
 tinker_log/
 .vscode/
-
-openevolve_output*/
 
 # Distribution / packaging
 .Python
@@ -19,7 +19,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -234,3 +233,5 @@ gpu_mode/kernel_compare.tsv
 gpu_mode/gpu_scores.tsv
 
 tinker_log/
+openproblems/
+data/

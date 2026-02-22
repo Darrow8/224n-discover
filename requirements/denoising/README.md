@@ -8,39 +8,50 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ## Setup
 
+**Important**: Use Python 3.11 (not 3.12+).
+
 ```bash
-uv venv .venv
+cd /path/to/ttt-continuous
+
+uv venv .venv --python 3.11
 source .venv/bin/activate
 
-# Install requirements
-uv pip install -r new_reqs.txt
+# 1. Install requirements
+uv pip install -r requirements/denoising/requirements-denoising.txt
 
-# Git dependencies
+# 2. Git dependencies
 uv pip install git+https://github.com/czbiohub/simscity.git
 uv pip install --no-deps git+https://github.com/czbiohub/molecular-cross-validation.git
-uv pip install -e ./openproblems
 
-# Minro API Change (if not already applied)
-cd openproblems && git apply ../openproblems_api_fix.patch && cd .. 
+# 3. Clone and install openproblems (--no-deps to avoid version conflicts)
+git clone https://github.com/openproblems-bio/openproblems.git
+cd openproblems && git checkout v1.0.0 && cd ..
+
+# 4. Apply patch (MUST be done before installing)
+cd openproblems && git apply ../requirements/denoising/openproblems_api_fix.patch && cd ..
+
+# 5. Install openproblems
+uv pip install --no-deps -e ./openproblems
 ```
 
-## Known Issues
+## Why --no-deps for openproblems?
 
-### 1. CZI cellxgene API changed
-Tabula Muris loader fails. The API now uses:
-- `dataset["dataset_id"]` instead of `dataset["id"]`
-- Assets embedded in dataset: `dataset["assets"]`
-- `asset["url"]` instead of `asset["presigned_url"]`
+`openproblems` v1.0.0 pins old dependencies (numpy 1.23.5, pandas 1.3.5, etc.) that conflict with modern packages like transformers and torch. Installing with `--no-deps` avoids these conflicts.
 
-**Fix**: `openproblems_api_fix.patch`
+## What the patch fixes
 
-### 2. NumPy 2.x compatibility
-PyTorch pulls NumPy 2.x which breaks old syntax:
-```python
-# Old (breaks):
-np.asarray(Y, dtype=np.float64, copy=False)
+The `openproblems_api_fix.patch` fixes three issues:
 
-# New (works):
-np.asarray(Y, dtype=np.float64)
+1. **CZI cellxgene API change** - Tabula Muris loader uses outdated API endpoints
+2. **NumPy 2.x compatibility** - Replaces deprecated `np.int` with `int`
+3. **Configurable cache directory** - Adds `OPENPROBLEMS_CACHE_DIR` env var support
+
+## Caching datasets
+
+Set `OPENPROBLEMS_CACHE_DIR` to persist downloaded datasets:
+
+```bash
+export OPENPROBLEMS_CACHE_DIR="/path/to/ttt-continuous/.openproblems_cache"
 ```
 
+This avoids re-downloading data on each run and is required for distributed training where `/tmp` isn't shared across nodes.

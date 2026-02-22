@@ -3,11 +3,6 @@
   <h3 align="center">Learning to Discover at Test Time</h3>
 </p>
 
-
-> [!IMPORTANT]
-> We'll refactor the code and share a much simpler API very soon! Sorry for the transition period..
-
-
 <p align="center">
   <a href="https://arxiv.org/abs/2601.16175"><img src="https://img.shields.io/badge/arXiv-2601.16175-b31b1b.svg" alt="arXiv"></a>
   <a href="https://test-time-training.github.io/discover/"><img src="https://img.shields.io/badge/Project-Page-blue" alt="Project Page"></a>
@@ -28,8 +23,85 @@
 **TTT-Discover** performs reinforcement learning at test time, allowing the LLM to continue training with experience specific to the problem at hand. We achieve **new state-of-the-art** across mathematics, GPU kernels, algorithms, and biology.
 
 <p align="center">
-  <img src="assets/figure1.svg" width="800">
+  <img src="docs/assets/figure1.svg" width="800">
 </p>
+
+## Installation
+
+```bash
+pip install ttt-discover
+```
+
+Or from source:
+```bash
+pip install -e .
+```
+
+Set environment variables:
+
+```bash
+export HF_TOKEN="..."
+export TINKER_API_KEY="..."      
+export WANDB_API_KEY="..."       
+export WANDB_ENTITY="..."        
+```
+
+## Making your own Environment
+
+To use TTT-Discover for your own application, you should create a new environment. Here are the general steps to make your own environment.
+
+1) Create a new environment that inherits ttt_discover.Environment.
+
+2) Define a reward evaluator that inherits ttt_discover.BaseRewardEvaluator. Optionally, you can use ttt_discover.SandboxRewardEvaluator to run generated code in sandboxes.
+
+4) (Optional) Add initial state definition to your environment.
+
+5) Define a config and run with ttt_discover.discover!
+
+Here is a sample skeleton for a new environment.
+```python
+# Import requred ttt_discover objects
+from ttt_discover import Environment, BaseRewardEvaluator, State, DiscoverConfig, discover
+
+
+# Define your reward function
+class YourReward(BaseRewardEvaluator):
+
+    def get_reward(self, code: str, state: State) -> float:
+        # ...add logic here for computing reward
+
+        return {
+            "reward": reward,
+            "correctness": 1.0,
+            "raw_score": raw_score,
+            "msg": f"Success; raw_score={raw_score}",
+            "result_construction": [], # Could reuse
+            "stdout": "", # No stdout
+        }
+
+
+class YourEnv(Environment):
+    reward_function = YourReward
+    state_type = State # You may define your own state if you wish
+
+    def get_question(self) -> str:
+        state_ctx = self.initial_state.to_prompt(100, metric_name="performance")
+
+        return f"""You are an expert mathematician specializing in combinatorial problems and computational geometry. Your task is to ... {state_ctx}."""
+
+
+config = DiscoverConfig(
+    env_type=YourEnv,
+    experiment_name="test-run",
+    wandb_project="",
+)
+
+# Run discovery
+discover(config)
+```
+
+Check [examples/circle_packing](examples/circle_packing) for a fully implemented example.
+
 
 ## Key Results
 
@@ -43,58 +115,13 @@
 
 </div>
 
-## Installation
-
-```bash
-pip install -r requirements/requirements-math.txt
-```
-
-Set environment variables:
-
-```bash
-export TINKER_API_KEY="..."      
-export WANDB_API_KEY="..."       
-export WANDB_ENTITY="..."        
-```
-
-Task-specific requirements:
-- GPU kernels: `requirements/requirements-gpumode.txt`
-- AtCoder: `requirements/requirements-ale.txt`  
-- Denoising: `requirements/denoising/requirements-denoising.txt` (see [README](requirements/denoising/README.md))
-
-## Quick Start
-
-Requires SLURM. Launch AC1 (autocorrelation inequality) on 4 nodes:
-
-```bash
-python main_tinker_submitit.py \
-    --nodes 4 \
-    --partition default \
-    --cpus-per-task 100 \
-    env=ac1 \
-    model_name="openai/gpt-oss-120b" \
-    sampler_type=puct_backprop \
-    initial_exp_type=random \
-    num_epochs=50 \
-    wandb_project="my-project" \
-    wandb_name="ac1-run-1"
-```
-
-Or use a preconfigured script:
-
-```bash
-bash scripts/tinker/ac1.sh
-```
-
-See [docs/launching.md](docs/launching.md) for all parameters and [docs/intro.md](docs/intro.md) for adding new tasks.
-
 ## Domains
 
 <details>
 <summary><b>Mathematics</b> — Classic open problems in combinatorics and analysis</summary>
 
 <p align="center">
-  <img src="assets/erdos.png" width="800">
+  <img src="docs/assets/erdos.png" width="800">
 </p>
 
 <div align="center">
@@ -151,6 +178,16 @@ See [docs/launching.md](docs/launching.md) for all parameters and [docs/intro.md
 </div>
 
 </details>
+</br>
+
+The environments to reproduce results from our paper are under examples/. To run these, please see [reproducing.md](docs/reproducing.md)
+
+## Submitit
+We provide submitit script to launch ttt-discover as a slurm job across multiple nodes with ray. See [submitit_launch.sh](examples/circle_packing/submitit_launch.sh) for an example.
+
+## Security Notice
+
+It is **recommended** to run all jobs on an isolated network or VPN if using ray. Ray has minimal built-in security protections and should not be exposed on a public or shared network.
 
 ## Acknowledgments
 
@@ -158,8 +195,6 @@ This work builds on several outstanding projects and communities:
 
 - **[GPU Mode](https://github.com/gpu-mode)** — Community for GPU kernel optimization and the TriMul competition
 - **[ALE-Bench](https://github.com/PLACEHOLDER)** — AtCoder-based benchmark for LLM evaluation
-- **[AlphaEvolve](https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/)** — DeepMind's evolutionary coding agent
-- **[OpenEvolve](https://github.com/codelion/openevolve)** — Open-source implementation of AlphaEvolve
 - **[Tinker](https://github.com/PLACEHOLDER)** — LLM training recipes and RL framework
 
 ## Citation

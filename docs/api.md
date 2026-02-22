@@ -78,7 +78,7 @@ Base class for problem environments. Subclass this to define a new task; the dis
 
 **Other methods (override as needed)**
 
-- **`is_maximize() -> bool`** — Default `True` (higher reward = better).
+- **`is_maximize() -> bool`** — Default `True` (higher reward = better). IMPORTANT: If setting is_maximize to False, the sampler will internally negate the state values, meaning you should probably create an initial state with a very negative initial value to avoid the sampler getting stuck in the intial state.
 - **`check_format(parsed_code: str) -> bool`** — Validate format of parsed code.
 - **`check_answer(parsed_code: str, step: int) -> VerifyResult`** — Async answer checking (uses timeout and optional sandbox).
 
